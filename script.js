@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
   const $ = id => document.getElementById(id);
 
-  /* ========== ELEMENTS ========== */
+  /* ================= ELEMENTS ================= */
   const fields = {
     project: $("project"),
     client: $("client"),
@@ -25,15 +25,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const statusFilter = $("statusFilter");
   const exportBtn = $("exportBtn");
 
-  /* Dashboard */
   const openCount = $("openCount");
   const reviewCount = $("reviewCount");
   const closedCount = $("closedCount");
   const totalCount = $("totalCount");
 
-  /* Signature */
   const canvas = $("signature");
   const ctx = canvas.getContext("2d");
+
+  let statusChart, monthlyChart;
 
   const STORAGE_KEY = "inspection_reports";
   let editId = null;
@@ -41,12 +41,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   yearEl.textContent = new Date().getFullYear();
 
-  /* ========== SIGNATURE ========== */
+  /* ================= SIGNATURE ================= */
   canvas.addEventListener("mousedown", () => drawing = true);
-  canvas.addEventListener("mouseup", () => {
-    drawing = false;
-    ctx.beginPath();
-  });
+  canvas.addEventListener("mouseup", () => { drawing = false; ctx.beginPath(); });
   canvas.addEventListener("mousemove", e => {
     if (!drawing) return;
     ctx.lineWidth = 2;
@@ -61,7 +58,7 @@ document.addEventListener("DOMContentLoaded", () => {
   window.clearSignature = () =>
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  /* ========== STORAGE ========== */
+  /* ================= STORAGE ================= */
   const getReports = () =>
     JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
 
@@ -72,7 +69,7 @@ document.addEventListener("DOMContentLoaded", () => {
     "IR-" + new Date().getFullYear() + "-" +
     Math.floor(1000 + Math.random() * 9000);
 
-  /* ========== DASHBOARD ========== */
+  /* ================= DASHBOARD ================= */
   function updateDashboard() {
     const reports = getReports();
     openCount.textContent = reports.filter(r => r.status === "Open").length;
@@ -81,7 +78,7 @@ document.addEventListener("DOMContentLoaded", () => {
     totalCount.textContent = reports.length;
   }
 
-  /* ========== SAVE / EDIT ========== */
+  /* ================= SAVE / EDIT ================= */
   function saveReport() {
     if (!fields.client.value || !fields.date.value) {
       alert("Client and Date required");
@@ -96,9 +93,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ? reports.find(r => r.id === editId).reportNo
         : generateReportNo(),
       signature: canvas.toDataURL(),
-      ...Object.fromEntries(
-        Object.entries(fields).map(([k, v]) => [k, v.value])
-      )
+      ...Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, v.value]))
     };
 
     const updated = editId
@@ -108,8 +103,7 @@ document.addEventListener("DOMContentLoaded", () => {
     saveReports(updated);
     editId = null;
     clearForm();
-    renderReports();
-    updateDashboard();
+    refreshAll();
   }
 
   function clearForm() {
@@ -117,9 +111,9 @@ document.addEventListener("DOMContentLoaded", () => {
     clearSignature();
   }
 
-  /* ========== RENDER (WITH FILTER) ========== */
+  /* ================= RENDER REPORTS ================= */
   function renderReports() {
-    const filter = statusFilter?.value || "All";
+    const filter = statusFilter.value;
     reportList.innerHTML = "";
 
     getReports()
@@ -129,9 +123,7 @@ document.addEventListener("DOMContentLoaded", () => {
         li.innerHTML = `
           <div>
             <strong>${r.reportNo}</strong> — ${r.project}
-            <span class="badge ${r.status.toLowerCase().replace(" ","-")}">
-              ${r.status}
-            </span>
+            <span class="badge ${r.status.toLowerCase().replace(" ","-")}">${r.status}</span>
           </div>
           <div>
             <button onclick="editReport(${r.id})">Edit</button>
@@ -143,7 +135,75 @@ document.addEventListener("DOMContentLoaded", () => {
       });
   }
 
-  /* ========== ACTIONS ========== */
+  /* ================= ANALYTICS ================= */
+  function renderStatusChart() {
+    const reports = getReports();
+    const data = [
+      reports.filter(r => r.status === "Open").length,
+      reports.filter(r => r.status === "In Review").length,
+      reports.filter(r => r.status === "Closed").length
+    ];
+
+    if (statusChart) statusChart.destroy();
+    statusChart = new Chart($("statusChart"), {
+      type: "pie",
+      data: {
+        labels: ["Open", "In Review", "Closed"],
+        datasets: [{ data }]
+      }
+    });
+  }
+
+  function renderMonthlyChart() {
+    const reports = getReports();
+    const months = {};
+
+    reports.forEach(r => {
+      if (!r.date) return;
+      const m = r.date.slice(0, 7);
+      months[m] = (months[m] || 0) + 1;
+    });
+
+    const labels = Object.keys(months).sort();
+    const values = labels.map(l => months[l]);
+
+    if (monthlyChart) monthlyChart.destroy();
+    monthlyChart = new Chart($("monthlyChart"), {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [{ label: "Reports / Month", data: values }]
+      }
+    });
+  }
+
+  function renderInspectorSummary() {
+    const list = $("inspectorSummary");
+    const reports = getReports();
+    const map = {};
+
+    reports.forEach(r => {
+      const name = r.inspector || "Unknown";
+      map[name] = (map[name] || 0) + 1;
+    });
+
+    list.innerHTML = "";
+    Object.entries(map).forEach(([name, count]) => {
+      const li = document.createElement("li");
+      li.textContent = `${name}: ${count} reports`;
+      list.appendChild(li);
+    });
+  }
+
+  function refreshAll() {
+    renderReports();
+    updateDashboard();
+    renderStatusChart();
+    renderMonthlyChart();
+    renderInspectorSummary();
+  }
+
+  /* ================= ACTIONS ================= */
   window.editReport = id => {
     const r = getReports().find(r => r.id === id);
     if (!r) return;
@@ -162,8 +222,7 @@ document.addEventListener("DOMContentLoaded", () => {
   window.deleteReport = id => {
     if (!confirm("Delete this report?")) return;
     saveReports(getReports().filter(r => r.id !== id));
-    renderReports();
-    updateDashboard();
+    refreshAll();
   };
 
   window.downloadSavedReport = id => {
@@ -172,7 +231,7 @@ document.addEventListener("DOMContentLoaded", () => {
     downloadPDF(r);
   };
 
-  /* ========== PDF (WITH SIGNATURE) ========== */
+  /* ================= PDF ================= */
   function downloadPDF(r) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
@@ -183,11 +242,7 @@ document.addEventListener("DOMContentLoaded", () => {
     y += 15;
 
     doc.setFontSize(11);
-    const row = (l, v) => {
-      doc.text(l + ":", 20, y);
-      doc.text(v || "-", 70, y);
-      y += 8;
-    };
+    const row = (l, v) => { doc.text(l + ":", 20, y); doc.text(v || "-", 70, y); y += 8; };
 
     row("Project", r.project);
     row("Client", r.client);
@@ -216,14 +271,14 @@ document.addEventListener("DOMContentLoaded", () => {
     doc.save("inspection-report.pdf");
   }
 
-  /* ========== EXCEL EXPORT ========== */
+  /* ================= EXPORT ================= */
   function exportToExcel() {
     const rows = getReports();
     if (!rows.length) return alert("No reports to export");
 
     const headers = Object.keys(rows[0]).join(",");
     const data = rows.map(r =>
-      Object.values(r).map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")
+      Object.values(r).map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")
     );
 
     const csv = [headers, ...data].join("\n");
@@ -236,29 +291,22 @@ document.addEventListener("DOMContentLoaded", () => {
     a.click();
   }
 
-  /* ========== EVENTS ========== */
+  /* ================= EVENTS ================= */
   saveBtn.addEventListener("click", saveReport);
-
   pdfBtn.addEventListener("click", () =>
-    downloadPDF(
-      Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, v.value]))
-    )
+    downloadPDF(Object.fromEntries(Object.entries(fields).map(([k,v]) => [k,v.value])))
   );
-
-  statusFilter?.addEventListener("change", renderReports);
-  exportBtn?.addEventListener("click", exportToExcel);
+  statusFilter.addEventListener("change", refreshAll);
+  exportBtn.addEventListener("click", exportToExcel);
 
   themeToggle.addEventListener("click", () => {
     document.body.classList.toggle("dark");
-    localStorage.setItem(
-      "theme",
-      document.body.classList.contains("dark") ? "dark" : "light"
-    );
+    localStorage.setItem("theme",
+      document.body.classList.contains("dark") ? "dark" : "light");
   });
 
   if (localStorage.getItem("theme") === "dark")
     document.body.classList.add("dark");
 
-  renderReports();
-  updateDashboard();
+  refreshAll();
 });

@@ -8,7 +8,11 @@
   <link rel="stylesheet" href="style.css" />
 
   <!-- jsPDF -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <script src="script.js" defer></script>
 </head>
 <body>
@@ -20,37 +24,24 @@
 
 <main>
 
-    <section class="card dashboard">
-  <h2>Dashboard Summary</h2>
-
-  <div class="dashboard-grid">
-    <div class="dash-box open">
-      <span id="openCount">0</span>
-      <p>Open</p>
+  <!-- DASHBOARD SUMMARY -->
+  <section class="card dashboard">
+    <h2>Dashboard Summary</h2>
+    <div class="dashboard-grid">
+      <div class="dash-box open"><span id="openCount">0</span><p>Open</p></div>
+      <div class="dash-box in-review"><span id="reviewCount">0</span><p>In Review</p></div>
+      <div class="dash-box closed"><span id="closedCount">0</span><p>Closed</p></div>
+      <div class="dash-box total"><span id="totalCount">0</span><p>Total</p></div>
     </div>
+  </section>
 
-    <div class="dash-box in-review">
-      <span id="reviewCount">0</span>
-      <p>In Review</p>
-    </div>
-
-    <div class="dash-box closed">
-      <span id="closedCount">0</span>
-      <p>Closed</p>
-    </div>
-
-    <div class="dash-box total">
-      <span id="totalCount">0</span>
-      <p>Total Reports</p>
-    </div>
-  </div>
-</section>
-
+ 
+  <!-- FORM -->
   <section class="card grid">
     <div>
       <h2>Create / Edit Report</h2>
 
-      <label>Report Status
+      <label>Status
         <select id="status">
           <option>Open</option>
           <option>In Review</option>
@@ -58,70 +49,43 @@
         </select>
       </label>
 
-      <label>Project Name
-        <input id="project">
-      </label>
-
-      <label>Client Name
-        <input id="client">
-      </label>
-
-      <label>Inspection Date
-        <input id="date" type="date">
-      </label>
+      <label>Project Name <input id="project"></label>
+      <label>Client Name <input id="client"></label>
+      <label>Date <input type="date" id="date"></label>
 
       <label>Inspection Method
         <select id="method">
-          <option>UT</option>
-          <option>RT</option>
-          <option>MT</option>
-          <option>PT</option>
-          <option>VT</option>
+          <option>UT</option><option>RT</option><option>MT</option>
+          <option>PT</option><option>VT</option>
         </select>
       </label>
 
       <label>Severity
         <select id="severity">
-          <option>Low</option>
-          <option>Medium</option>
-          <option>High</option>
+          <option>Low</option><option>Medium</option><option>High</option>
         </select>
       </label>
 
       <label>Defect Type
         <select id="defectType">
-          <option>Surface</option>
-          <option>Internal</option>
-          <option>Crack</option>
-          <option>Porosity</option>
-          <option>Other</option>
+          <option>Surface</option><option>Internal</option>
+          <option>Crack</option><option>Porosity</option>
         </select>
       </label>
 
       <label>Result
         <select id="result">
-          <option>Accepted</option>
-          <option>Rejected</option>
+          <option>Accepted</option><option>Rejected</option>
         </select>
       </label>
 
-      <label>Inspector Name
-        <input id="inspector">
-      </label>
+      <label>Inspector Name <input id="inspector"></label>
     </div>
 
     <div>
-      <label>Acceptance Criteria
-        <textarea id="acceptance"></textarea>
-      </label>
-
-      <label>Specification of Code
-        <textarea id="specification"></textarea>
-      </label>
-
-      <label>Defect Description
-        <textarea id="defect"></textarea>
-      </label>
+      <label>Acceptance Criteria <textarea id="acceptance"></textarea></label>
+      <label>Specification of Code <textarea id="specification"></textarea></label>
+      <label>Defect Description <textarea id="defect"></textarea></label>
 
       <label>Inspector Signature</label>
       <canvas id="signature" width="300" height="120"></canvas>
@@ -134,21 +98,35 @@
     </div>
   </section>
 
-  <div style="display:flex; gap:1rem; margin-bottom:1rem;">
-  <select id="statusFilter">
-    <option value="All">All Status</option>
-    <option value="Open">Open</option>
-    <option value="In Review">In Review</option>
-    <option value="Closed">Closed</option>
-  </select>
+   <!-- ANALYTICS -->
+  <section class="card">
+    <h2>Analytics</h2>
+    <div class="grid">
+      <canvas id="statusChart"></canvas>
+      <canvas id="monthlyChart"></canvas>
+    </div>
 
-  <button id="exportBtn">Export to Excel</button>
- </div>
+    <h3 style="margin-top:1.5rem;">Inspector-wise Summary</h3>
+    <ul id="inspectorSummary"></ul>
+  </section>
 
+  <!-- FILTER + EXPORT -->
+  <div class="filter-bar">
+    <select id="statusFilter">
+      <option value="All">All Status</option>
+      <option>Open</option>
+      <option>In Review</option>
+      <option>Closed</option>
+    </select>
+    <button id="exportBtn">Export to Excel</button>
+  </div>
+
+  <!-- SAVED REPORTS -->
   <section class="card">
     <h2>Saved Reports</h2>
     <ul id="reportList" class="reports"></ul>
   </section>
+
 </main>
 
 <footer class="site-footer">
